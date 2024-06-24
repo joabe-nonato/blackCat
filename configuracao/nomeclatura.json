@@ -1,0 +1,16 @@
+{"dados":
+{
+    "lista_codigo":"Lista de código e sua ação: \n",
+    "codigo_desejado":"Informe o código desejado: ",
+    "todos":"Todos da lista",
+    "atualizar_bases":"Atualizar Bases",
+    "para_sair":"para Sair\n",
+    "retornar_menu":"Deseja retornar ao menu",
+    "voltar_menu":"Digite uma tecla para voltar ao menu",
+    "finalizando":"Finalizando aplicação",
+    "opcao_invalida":"Opção inválida",
+    "erro":"Ocorreu um erro"
+   }
+}
+
+
