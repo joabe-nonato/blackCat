@@ -1,5 +1,7 @@
 # Ignorar todos os arquivos dentro da pasta logs
 logs/
 
+# executar/
+
 # Ignorar o arquivo conexoes.json dentro da pasta configuracao
-configuracao/conexoes.json
+# configuracao/conexoes.json

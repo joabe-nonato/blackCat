@@ -91,13 +91,13 @@ def OpcaoInvalida():
     sleep(2)
     gravar_log_aplicacao(nomeclatura["opcao_invalida"])
     input(nomeclatura["voltar_menu"])
-    listar_acoes()
+    aplicativo()
 
 
 def ocorreu_erro():
     gravar_log_aplicacao(nomeclatura["erro"])
     input(nomeclatura["voltar_menu"])
-    listar_acoes()
+    aplicativo()
 
 
 def perguntar():
@@ -105,12 +105,12 @@ def perguntar():
     novaExecucao = input(nomeclatura["retornar_menu"] + " (S/N)")
 
     if novaExecucao == "s" or novaExecucao == "S":
-        listar_acoes()
+        aplicativo()
     else:
         finalizar()
 
 
-def listar_acoes():
+def aplicativo():
     system('cls')    
     conexoes = leitor_arquivo_json(f"configuracao\\conexoes.json", "dados")
 
@@ -134,33 +134,33 @@ def listar_acoes():
     print("T = " + nomeclatura["todos"])
     print("S = " + nomeclatura["para_sair"])    
     
-    executarEm = ''
-    executarEm = str(input(nomeclatura["codigo_desejado"]))
+    item_selecionado = ''
+    item_selecionado = str(input(nomeclatura["codigo_desejado"]))
 
 #EXECUTAR AÇÃO SELECIONADA
     lista_execucao = []
     nao_selecionado = True
 
-    print(executarEm)
+    print(item_selecionado)
         
     try:    
     
         # SAIR        
-        if executarEm == "S" or executarEm == "s":
+        if item_selecionado == "S" or item_selecionado == "s":
             finalizar() 
-        # elif executarEm == "A" or executarEm == "a":
+        # elif item_selecionado == "A" or item_selecionado == "a":
         #     atualizar_bases()
         else: 
         # SELECIONAR
             for acao in Conexao.lista:
 
-                if str(acao._id) == executarEm:
+                if str(acao._id) == item_selecionado:
                     nao_selecionado = False
                     print(acao.nome)
                     lista_execucao.append(acao)
                     break
 
-                elif executarEm == "T" or executarEm == "t":
+                elif item_selecionado == "T" or item_selecionado == "t":
                     nao_selecionado = False
                     print(acao.nome)
                     lista_execucao.append(acao)

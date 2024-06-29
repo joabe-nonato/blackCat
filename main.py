@@ -1,9 +1,9 @@
-# pyinstaller --onefile --noconfirm --name blackcat  main.py
+3# pyinstaller --onefile --noconfirm --name blackcat  main.py
 from repos import *
 
 
 def main():
-    listar_acoes()
+    aplicativo()
 
 
 if __name__ == '__main__':
