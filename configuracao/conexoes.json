@@ -1,0 +1,22 @@
+{"dados":[
+    {
+     "nome":"desenvolvimento",
+     "servidor":"111.111.111.111",
+     "usuario":"usuario_desenv",
+        "senha":"senhaDesenv"
+    },
+    {
+        "nome":"homologacao",
+        "servidor":"222.222.222.222",
+        "usuario":"usuario_homolog",
+        "senha":"senhaHomolog"   
+       }
+       ,
+    {
+        "nome":"producao",
+        "servidor":"333.333.333.333",
+        "usuario":"usuario_producao",
+        "senha":"senhaProducao"   
+       }
+ ]
+}
