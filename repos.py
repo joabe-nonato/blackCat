@@ -112,7 +112,7 @@ def perguntar():
 
 def listar_acoes():
     system('cls')    
-    conexoes = leitor_arquivo_json(f"configuracao\conexoes.json", "dados")
+    conexoes = leitor_arquivo_json(f"configuracao\\conexoes.json", "dados")
 
     global nomeclatura
     nomeclatura = leitor_arquivo_json(f"configuracao\\nomeclatura.json", "dados")
