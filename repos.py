@@ -1,9 +1,11 @@
 from datetime import datetime
 from modelos.generico import *
-from os import path, system
+from os import path, system, listdir
 import json
 from time import sleep
 from sys import exit
+import pandas as pd
+import pyodbc
 
 def arquivo_existe(local_arquivo):
 # Verifica se o arquivo existe
@@ -40,10 +42,28 @@ def gravar_log_aplicacao(texto):
         arquivo.write(textoLog)
 
 
+def VerificarDiretorio(diretorio):
+    try:
+        return listdir(diretorio)
+    except FileNotFoundError:
+        print('Ocorreu um erro em VerificarDiretorio')
+        return []
+
 def leitor_de_arquivo(arquivo):
 # Executa a leitura de arquivo
 # Entrada: arquivo (Nome completo do arquivo com o endereço)
 # Retorno: texto (Conteúdo do arquivo)
+    texto = ''
+    try:
+        with open(arquivo) as conteudo:
+            texto = conteudo.read()
+            conteudo.close()
+    except:
+        return ''
+    
+    return texto
+
+def RecuperarScript(arquivo):
     texto = ''
     try:
         with open(arquivo) as conteudo:
@@ -67,6 +87,75 @@ def leitor_arquivo_json(localarquivo, node):
     except FileExistsError:
         print("ocorreu um erro")
         return[]
+
+
+def Executar(database, strcon, comando):
+    
+    print('Executar', database, strcon, comando)
+
+    mensagem = ''
+
+    try:
+        conexao = pyodbc.connect(strcon)
+        cursor = conexao.cursor()
+        cursor.execute(comando)
+        cursor.commit()
+    
+    except pyodbc.Error as e:
+        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro:\r\n{e.args[1]}'                
+    except pyodbc.InterfaceError as e:
+        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro pyodbc.InterfaceError:\r\n{e}'        
+    except pyodbc.DatabaseError as e:
+        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro pyodbc.DatabaseError:\r\n{e}'
+        
+    finally:                    
+        if 'The login failed. (4060)' not in mensagem:            
+            cursor.close()        
+            del cursor
+            conexao.close()
+        else:
+            mensagem += f'\r\n \r\nATENÇÃO:\r\nNão existe a base {database} no servidor 67'
+
+    return mensagem
+
+
+def retorno_database(filtro, lista_conexao):
+    dados = pd.read_csv("dados\\base.csv")
+    df = pd.DataFrame(lista_conexao)
+    conexao_filtrada = df[df['nome'] == filtro]
+    # Verificar se as colunas 'servidor' e 'base' existem no DataFrame
+    if 'servidor' not in dados.columns or 'base' not in dados.columns:
+        print("As colunas 'servidor' e/ou 'base' não foram encontradas no CSV.")
+        return
+    # print("XXXXXX:")
+    # print(dados.head(), filtro)
+    dados_filtrados = dados[dados["servidor"] == filtro]
+    # Verificar se há dados após a filtragem
+    if dados_filtrados.empty:
+        print("Nenhum dado encontrado para o filtro fornecido.")
+        return
+    # Exibir as primeiras linhas do DataFrame filtrado para verificação
+    # print("Primeiras linhas do DataFrame filtrado:")
+    # print(dados_filtrados.head())
+    arquivos = VerificarDiretorio('executar')
+    if len(arquivos) > 0:
+        arquivos.sort()
+    else:
+        print("Nenhum arquivo encontrado para execução.")
+
+    #carregar um array de scripts
+    for arquivo in arquivos:
+        #ler arquivo do diretório
+        comando = RecuperarScript(f'executar\{arquivo}')
+    # PERCORRER CONEXOES FILTRADAS
+        for indice, conn in conexao_filtrada.iterrows():    
+            #PERCORRER BASES DE DADOS FILTRADAS
+            for indice, linha in dados_filtrados.iterrows():    
+                base_selecionada = linha['base']
+                cadeia_conexao = retornar_string_conexao(conn['servidor'],base_selecionada, conn['usuario'], conn['senha'])                       
+                
+                # print(cadeia_conexao, comando)
+                Executar(base_selecionada, cadeia_conexao, comando)
 
 
 def retornar_string_conexao(servidor, database, username, password):
@@ -117,6 +206,9 @@ def aplicativo():
     global nomeclatura
     nomeclatura = leitor_arquivo_json(f"configuracao\\nomeclatura.json", "dados")
 
+    # print("RetornarBaseDados")
+    # RetornarBaseDados()
+
 #CRIAR LISTA DE CONEXOES, CASO NÃO EXISTA
     gravar_log_aplicacao(nomeclatura["lista_codigo"])
     
@@ -141,7 +233,7 @@ def aplicativo():
     lista_execucao = []
     nao_selecionado = True
 
-    print(item_selecionado)
+    # print(item_selecionado)
         
     try:    
     
@@ -156,14 +248,14 @@ def aplicativo():
 
                 if str(acao._id) == item_selecionado:
                     nao_selecionado = False
-                    print(acao.nome)
-                    lista_execucao.append(acao)
+                    # print(acao.nome)
+                    lista_execucao.append(acao.nome)
                     break
 
                 elif item_selecionado == "T" or item_selecionado == "t":
                     nao_selecionado = False
-                    print(acao.nome)
-                    lista_execucao.append(acao)
+                    # print(acao.nome)
+                    lista_execucao.append(acao.nome)
                     continue
 
 
@@ -173,8 +265,8 @@ def aplicativo():
             else:
                 
                 # EXECUTAR NA BASE
-                for executar in lista_execucao:
-                    print(executar)
+                for filtro in lista_execucao:
+                    retorno_database(filtro, conexoes)
 
                 perguntar()
 
