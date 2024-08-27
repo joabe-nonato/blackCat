@@ -1,5 +1,5 @@
-3# pyinstaller --onefile --noconfirm --name blackcat  main.py
-from repos import *
+# pyinstaller --onefile --noconfirm --name blackcat  main.py
+from repos import aplicativo
 
 
 def main():

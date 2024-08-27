@@ -1,5 +1,7 @@
 {"dados":
 {
+    "arquivo_bases":"D:\\BASES\\bases_prod.csv",
+    
     "lista_codigo":"Lista de código e sua ação: \n",
     "codigo_desejado":"Informe o código desejado: ",
     "todos":"Todos da lista",
