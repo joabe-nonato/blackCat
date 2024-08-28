@@ -188,8 +188,10 @@ def executar_script(selecao):
                 except:
                     gravar_log_aplicacao(f'Erro ao executar o arquivo "{arquivo}" no ambiente {item.ambiente} base: {item.base}')
 
-        # mover_arquivo_executado(arquivo)
-
+        mover = input(f'\n\rMover o arquivo "{arquivo}" para pasta de itens executados? (S/N)')
+        if mover.upper() == 'S':
+            mover_arquivo_executado(arquivo)
+        
     else:
         OpcaoInvalida()
 
@@ -248,15 +250,17 @@ def aplicativo():
     nomeclatura = leitor_arquivo_json(nome_path, "dados")
     
 #CRIAR LISTA DE CONEXOES, CASO NÃO EXISTA
-    gravar_log_aplicacao(nomeclatura["lista_codigo"])
+    # gravar_log_aplicacao(nomeclatura["lista_codigo"])
 
 #Carregar lista de bases
     carregar_bases()    
 
 #EXIBIR LISTA DE OPÇÕES EM TELA
-    lista_ambientes = list(set([conexao.ambiente for conexao in Conexao.lista]))
+    lista_ambientes = sorted(list(set([conexao.ambiente for conexao in Conexao.lista])))
 
-    for indice, acao in enumerate(sorted(lista_ambientes)):
+    # lista_ambientes.sort()
+
+    for indice, acao in enumerate(lista_ambientes):
         print( f'{indice} = {acao}')
 
     # print(" ")
@@ -271,25 +275,29 @@ def aplicativo():
 #EXECUTAR AÇÃO SELECIONADA   
     try:        
         # SAIR        
-        if item_selecionado == "S" or item_selecionado == "s":
+        if item_selecionado.upper() == "S":
             finalizar() 
         # elif item_selecionado == "A" or item_selecionado == "a":
         #     atualizar_bases()
-        elif item_selecionado == "L" or item_selecionado == "l":
+        elif item_selecionado.upper() == "L":
             Conexao.listar_conexoes()
             perguntar()
-        elif item_selecionado == "T" or item_selecionado == "t":
+        elif item_selecionado.upper() == "T":
             executar_script(Conexao.lista)
         else: 
-            ambiente = lista_ambientes[int(item_selecionado)]
 
-            gravar_log_aplicacao(f"Item selecionado: {ambiente}")
+            if int(item_selecionado) <= len(lista_ambientes):
+                ambiente = lista_ambientes[int(item_selecionado)]
 
-            selecao = list(filter(lambda x: x.ambiente == ambiente, Conexao.lista))
-            executar_script(selecao)
+                gravar_log_aplicacao(f"Item selecionado: {ambiente}")
 
-            gravar_log_aplicacao("Concluído")
-            perguntar()
+                selecao = list(filter(lambda x: x.ambiente == ambiente, Conexao.lista))
+                executar_script(selecao)
+
+                gravar_log_aplicacao("Concluído")
+                perguntar()
+            else:
+                OpcaoInvalida()
             return
         
     except:  
