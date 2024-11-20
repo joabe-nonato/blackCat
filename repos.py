@@ -146,12 +146,13 @@ def Executar(database, strcon, comando):
         cursor.execute(comando)
         cursor.commit()
     
-    except pyodbc.Error as e:
-        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro:\r\n{e.args[1]}'                
+                
     except pyodbc.InterfaceError as e:
         mensagem += f'\r\n \r\nBASE: {database}\r\n Erro pyodbc.InterfaceError:\r\n{e}'        
     except pyodbc.DatabaseError as e:
         mensagem += f'\r\n \r\nBASE: {database}\r\n Erro pyodbc.DatabaseError:\r\n{e}'
+    except pyodbc.Error as e:
+        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro:\r\n{e.args[1]}'    
         
     finally:                    
         if 'The login failed. (4060)' not in mensagem:            
@@ -183,14 +184,15 @@ def executar_script(selecao):
             for item in selecao:
                 gravar_log_aplicacao(f'Executando o arquivo "{arquivo}" no ambiente {item.ambiente} base: {item.base}')
                 
-                try:
-                    Executar(item.base, item.conetar, comando)                    
-                except:
+                mensagem_erro = Executar(item.base, item.conetar, comando)
+
+                if mensagem_erro != "":
                     gravar_log_aplicacao(f'Erro ao executar o arquivo "{arquivo}" no ambiente {item.ambiente} base: {item.base}')
 
-        mover = input(f'\n\rMover o arquivo "{arquivo}" para pasta de itens executados? (S/N)')
-        if mover.upper() == 'S':
-            mover_arquivo_executado(arquivo)
+            #mover arquivo dara diretorio
+            mover = input(f'\n\rMover o arquivo "{arquivo}" para pasta de itens executados? (S/N)')
+            if mover.upper() == 'S':
+                mover_arquivo_executado(arquivo)
         
     else:
         OpcaoInvalida()
