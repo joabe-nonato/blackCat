@@ -1,9 +1,46 @@
 from datetime import datetime
 from modelos.generico import *
-from os import path, system
+from os import path, system, listdir
 import json
 from time import sleep
-from sys import exit
+import sys
+# import pandas as pd
+import pyodbc
+import csv
+import shutil
+
+# pandas, numpy, openpyxl
+# pip install pandas
+# pip install numpy
+# pip install openpyxl
+
+def obter_caminho_diretorio():
+    # Se o script estiver rodando como um executável
+    if hasattr(sys, '_MEIPASS'):
+        base_path = sys._MEIPASS
+    else:
+        # Se rodando como script Python
+        base_path = path.abspath(".")
+
+    return base_path
+
+def obter_caminho_absoluto(relativo):
+    # Se o script estiver rodando como um executável
+    if hasattr(sys, '_MEIPASS'):
+        # Caminho para o diretório temporário onde o PyInstaller descompacta os arquivos
+        base_path = sys._MEIPASS
+    else:
+        # print(' Caminho para o diretório onde o script Python está localizado')
+        base_path = path.abspath(".")
+
+    return path.join(base_path, relativo)
+
+
+diretorio = path.dirname(path.abspath(__file__))
+
+def diretorio_arquivo(pasta, arquivo):
+    return obter_caminho_absoluto(path.join(pasta, arquivo))
+
 
 def arquivo_existe(local_arquivo):
 # Verifica se o arquivo existe
@@ -11,6 +48,14 @@ def arquivo_existe(local_arquivo):
 # Retorna: True ou Falso
     return path.isfile(local_arquivo)
 
+
+def mover_arquivo(origem, destino):
+    shutil.move(origem, destino)
+
+def mover_arquivo_executado(nome_arquivo):
+    origem = diretorio_arquivo("executar", nome_arquivo)
+    destino = diretorio_arquivo("executado", nome_arquivo)
+    mover_arquivo(origem, destino)
 
 def gravar_texto(local, texto):
 # MÉTODO PADRÃO PARA GRAVAR (CRIA\EDITA) UM ARQUIVO TEXTO
@@ -34,16 +79,38 @@ def gravar_log_aplicacao(texto):
     print(texto)
 
     agora = datetime.now()
-    localLog = f'logs\log{str(agora.year)}_{str(agora.month)}_{str(agora.day)}.txt'
+
+    localLog = diretorio_arquivo('logs',f'log{str(agora.year)}_{str(agora.month)}_{str(agora.day)}.txt')
+
+    # localLog = f'logs\log{str(agora.year)}_{str(agora.month)}_{str(agora.day)}.txt'
 
     with open(localLog, "a", encoding='utf8') as arquivo:
         arquivo.write(textoLog)
 
 
+def VerificarDiretorio(pasta):
+    try:
+        diretorio = path.join(obter_caminho_diretorio(), pasta)        
+        return listdir(diretorio)
+    except FileNotFoundError:
+        print(f'Ocorreu um erro em VerificarDiretorio: {diretorio}')
+        return []
+
 def leitor_de_arquivo(arquivo):
 # Executa a leitura de arquivo
 # Entrada: arquivo (Nome completo do arquivo com o endereço)
 # Retorno: texto (Conteúdo do arquivo)
+    texto = ''
+    try:
+        with open(arquivo) as conteudo:
+            texto = conteudo.read()
+            conteudo.close()
+    except:
+        return ''
+    
+    return texto
+
+def RecuperarScript(arquivo):
     texto = ''
     try:
         with open(arquivo) as conteudo:
@@ -69,13 +136,67 @@ def leitor_arquivo_json(localarquivo, node):
         return[]
 
 
-def retornar_string_conexao(servidor, database, username, password):
-# RETORNA A STRING DE CONEXÃO SQL
-# Entrada: servidor, database, username, password
-# Retorno: string de conexão
-    return f"Driver=SQL Server;Server={servidor};Database={database};UID={username};PWD={password}"
+def Executar(database, strcon, comando):
 
-#   PROGRAMA   ###############   PROGRAMA   ###############   PROGRAMA   ###############   PROGRAMA   ############
+    mensagem = ''
+
+    try:
+        conexao = pyodbc.connect(strcon)
+        cursor = conexao.cursor()
+        cursor.execute(comando)
+        cursor.commit()
+    
+                
+    except pyodbc.InterfaceError as e:
+        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro pyodbc.InterfaceError:\r\n{e}'        
+    except pyodbc.DatabaseError as e:
+        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro pyodbc.DatabaseError:\r\n{e}'
+    except pyodbc.Error as e:
+        mensagem += f'\r\n \r\nBASE: {database}\r\n Erro:\r\n{e.args[1]}'    
+        
+    finally:                    
+        if 'The login failed. (4060)' not in mensagem:            
+            cursor.close()        
+            del cursor
+            conexao.close()
+        else:
+            mensagem += f'\r\n \r\nATENÇÃO:\r\nNão existe a base {database} no servidor 67'
+
+    return mensagem
+
+def executar_script(selecao):    
+    # ITEM SELECIONADO VALIDO
+    if len(selecao) > 0:       
+
+        arquivos = VerificarDiretorio('executar')
+        if len(arquivos) > 0:
+            arquivos.sort()
+        else:
+            print("Nenhum arquivo encontrado para execução.")
+
+        # #carregar um array de scripts
+        for arquivo in arquivos:
+            #ler arquivo do diretório
+            caminho_arquivo = diretorio_arquivo('executar',arquivo)
+
+            comando = RecuperarScript(caminho_arquivo)
+            
+            for item in selecao:
+                gravar_log_aplicacao(f'Executando o arquivo "{arquivo}" no ambiente {item.ambiente} base: {item.base}')
+                
+                mensagem_erro = Executar(item.base, item.conetar, comando)
+
+                if mensagem_erro != "":
+                    gravar_log_aplicacao(f'Erro ao executar o arquivo "{arquivo}" no ambiente {item.ambiente} base: {item.base}')
+
+            #mover arquivo dara diretorio
+            mover = input(f'\n\rMover o arquivo "{arquivo}" para pasta de itens executados? (S/N)')
+            if mover.upper() == 'S':
+                mover_arquivo_executado(arquivo)
+        
+    else:
+        OpcaoInvalida()
+
 def finalizar():
     gravar_log_aplicacao(nomeclatura["finalizando"])
     sleep(2)
@@ -86,13 +207,11 @@ def atualizar_bases():
     sleep(2)
     system('cls')    
 
-
 def OpcaoInvalida():
     sleep(2)
     gravar_log_aplicacao(nomeclatura["opcao_invalida"])
     input(nomeclatura["voltar_menu"])
     aplicativo()
-
 
 def ocorreu_erro():
     gravar_log_aplicacao(nomeclatura["erro"])
@@ -109,75 +228,80 @@ def perguntar():
     else:
         finalizar()
 
+def carregar_bases():        
+    if len(Conexao.lista) == 0:       
+        
+        config_path = diretorio_arquivo('configuracao','config.json')
+
+        bases = leitor_arquivo_json(config_path, "dados")
+
+        with open(bases["arquivo_bases"],"r") as arquivo:
+            
+            arquivo_csv = csv.reader(arquivo, delimiter=",")
+
+            for indice, item in enumerate(arquivo_csv):
+                if indice > 0:
+                    Conexao(item[1], item[2], item[3], item[4], item[5], item[6])
 
 def aplicativo():
     system('cls')    
-    conexoes = leitor_arquivo_json(f"configuracao\\conexoes.json", "dados")
 
     global nomeclatura
-    nomeclatura = leitor_arquivo_json(f"configuracao\\nomeclatura.json", "dados")
+    nome_path = diretorio_arquivo('configuracao','config.json')
 
-#CRIAR LISTA DE CONEXOES, CASO NÃO EXISTA
-    gravar_log_aplicacao(nomeclatura["lista_codigo"])
+    nomeclatura = leitor_arquivo_json(nome_path, "dados")
     
-    if len(Conexao.lista) == 0:
-        for item in conexoes:
-            Conexao(item["nome"], item["servidor"], item["usuario"], item["senha"])
+#CRIAR LISTA DE CONEXOES, CASO NÃO EXISTA
+    # gravar_log_aplicacao(nomeclatura["lista_codigo"])
+
+#Carregar lista de bases
+    carregar_bases()    
 
 #EXIBIR LISTA DE OPÇÕES EM TELA
-    for acao in Conexao.lista:
-        print(acao)
+    lista_ambientes = sorted(list(set([conexao.ambiente for conexao in Conexao.lista])))
 
-    print(" ")
+    # lista_ambientes.sort()
+
+    for indice, acao in enumerate(lista_ambientes):
+        print( f'{indice} = {acao}')
+
+    # print(" ")
     # print("A = " + nomeclatura["atualizar_bases"])
-    # print("L = Listar bases")
+    print("L = Listar bases")
     print("T = " + nomeclatura["todos"])
     print("S = " + nomeclatura["para_sair"])    
     
     item_selecionado = ''
     item_selecionado = str(input(nomeclatura["codigo_desejado"]))
 
-#EXECUTAR AÇÃO SELECIONADA
-    lista_execucao = []
-    nao_selecionado = True
-
-    print(item_selecionado)
-        
-    try:    
-    
+#EXECUTAR AÇÃO SELECIONADA   
+    try:        
         # SAIR        
-        if item_selecionado == "S" or item_selecionado == "s":
+        if item_selecionado.upper() == "S":
             finalizar() 
         # elif item_selecionado == "A" or item_selecionado == "a":
         #     atualizar_bases()
+        elif item_selecionado.upper() == "L":
+            Conexao.listar_conexoes()
+            perguntar()
+        elif item_selecionado.upper() == "T":
+            executar_script(Conexao.lista)
         else: 
-        # SELECIONAR
-            for acao in Conexao.lista:
 
-                if str(acao._id) == item_selecionado:
-                    nao_selecionado = False
-                    print(acao.nome)
-                    lista_execucao.append(acao)
-                    break
+            if int(item_selecionado) <= len(lista_ambientes):
+                ambiente = lista_ambientes[int(item_selecionado)]
 
-                elif item_selecionado == "T" or item_selecionado == "t":
-                    nao_selecionado = False
-                    print(acao.nome)
-                    lista_execucao.append(acao)
-                    continue
+                gravar_log_aplicacao(f"Item selecionado: {ambiente}")
 
+                selecao = list(filter(lambda x: x.ambiente == ambiente, Conexao.lista))
+                executar_script(selecao)
 
-            # SELEÇÃO ERRADA
-            if nao_selecionado:
-                OpcaoInvalida()
-            else:
-                
-                # EXECUTAR NA BASE
-                for executar in lista_execucao:
-                    print(executar)
-
+                gravar_log_aplicacao("Concluído")
                 perguntar()
-
+            else:
+                OpcaoInvalida()
+            return
+        
     except:  
         ocorreu_erro()
 

@@ -3,24 +3,29 @@
 class Conexao:
     lista = []
 
-    def __init__(self, nome, servidor, usuario, senha):
-        self.nome = nome
+    def __init__(self, ambiente, cliente, servidor, usuario, senha, base):
+        self.ambiente = ambiente
+        self.cliente = cliente
         self.servidor = servidor
         self.usuario = usuario
         self.senha = senha
-        Conexao.lista.append(self)
-        self._id = (Conexao.lista.index(self) + 1)
+        self.base = base
+        self.conetar = f"Driver=SQL Server;Server={self.servidor};Database={self.base};UID={self.usuario};PWD={self.senha}"
+        
+        if len(ambiente) > 0 and len(cliente) > 0 and len(servidor) > 0 and len(usuario) > 0 and len(senha) > 0 and len(base) > 0:
+            Conexao.lista.append(self)
+            self._id = (Conexao.lista.index(self) + 1)
 
     def __str__(self):
-        return f'{self._id} = {self.nome}'
+        return f'{self._id} = {self.ambiente} - {self.cliente}'
 
 #MÉTODOS
     @classmethod
     def listar_conexoes(cls):
-        print(f'{"Nome".ljust(5)}')
+        print(f'{"ambiente".ljust(5)}')
 
         for registro in cls.lista:
-            print(f'{registro.nome.ljust(30)} ')
+            print(f'{registro.ambiente} Base: {registro.base} ')
 
 
 
